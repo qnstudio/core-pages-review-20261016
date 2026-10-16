@@ -27,9 +27,9 @@
         const li=el('li'),row=el('div',undefined,'feedback-row'),details=el('details'),summary=el('summary'),content=el('div',undefined,'feedback-content');
         summary.append(el('span',item.author));if(item.revisedAt)summary.append(el('span','✓','feedback-revised'));
         details.className=item.completedAt?'feedback-item completed':'feedback-item';details.open=expanded.has(item.id);details.addEventListener('toggle',()=>details.open?expanded.add(item.id):expanded.delete(item.id));
-        summary.title=item.completedAt?'작성자 확인 완료':'미완료';
+        summary.title=item.completedAt?'작성자 확인 완료':item.revisedAt?'보완 처리 · 작성자 확인 대기':'미완료';
         const meta=el('div',`${labels[item.state]||labels.page} · ${date.format(new Date(item.createdAt))}`,'feedback-meta');
-        content.append(meta,el('p',item.body),el('span',item.completedAt?'작성자 확인 완료':'미완료','feedback-state'));
+        content.append(meta,el('p',item.body),el('span',item.completedAt?'작성자 확인 완료':item.revisedAt?'보완 처리 · 작성자 확인 대기':'미완료','feedback-state'));
         if(item.canEdit){
           const actions=el('div',undefined,'feedback-actions');
           actions.append(button(item.completedAt?'다시 열기':'확인 완료',()=>change(item,'PATCH',{action:item.completedAt?'reopen':'complete'})));
@@ -45,7 +45,9 @@
             const box=el('div','이 피드백을 삭제할까요?','feedback-delete-confirm');box.append(button('삭제 확인',()=>change(item,'DELETE',{})),button('취소',()=>box.remove()));content.append(box);
           }));content.append(actions);
         }else content.append(el('small','수정·삭제·완료는 작성한 브라우저에서 할 수 있습니다.','feedback-owner-note'));
-        details.append(summary,content);row.append(details,button(item.revisedAt?'보완 취소':'보완',()=>change(item,'PATCH',{action:item.revisedAt?'unrevise':'revise'})));row.lastChild.className='feedback-revise-button';li.append(row);list.append(li);
+        const revise=button(item.revisedAt?'보완 처리':'보완',()=>change(item,'PATCH',{action:item.revisedAt?'unrevise':'revise'}));
+        revise.className='feedback-revise-button';revise.title=item.revisedAt?'보완 처리 취소':'작업 후 보완 처리';revise.setAttribute('aria-pressed',String(!!item.revisedAt));
+        details.append(summary,content);row.append(details,revise);li.append(row);list.append(li);
       });
     }
     async function load(){if(loading||busy)return;loading=true;try{items=(await api('GET',null,page)).items;render();}catch{count.textContent='불러오지 못했습니다. 새로고침해 주세요.';}finally{loading=false;}}
