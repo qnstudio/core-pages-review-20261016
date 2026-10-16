@@ -68,3 +68,20 @@
   document.querySelectorAll('.capture-open').forEach(b=>b.addEventListener('click',()=>{const image=b.previousElementSibling.querySelector('img');dialog.querySelector('img').src=image.src;dialog.querySelector('img').alt=image.alt;dialog.querySelector('h3').textContent=image.alt;dialog.showModal();}));
   dialog.querySelector('button').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
 })();
+
+(() => {
+ const search=document.getElementById('audit-search'),type=document.getElementById('audit-type'),evidence=document.getElementById('audit-evidence');
+ if(!search)return;
+ const rows=[...document.querySelectorAll('[data-audit-row]')];
+ const filter=()=>{let count=0;const term=search.value.trim().toLowerCase();rows.forEach(row=>{const show=(!term||row.textContent.toLowerCase().includes(term))&&(type.value==='all'||row.dataset.type===type.value)&&(evidence.value==='all'||row.dataset.evidence===evidence.value);row.hidden=!show;if(show)count++;});document.getElementById('audit-count').textContent=count+'개 표시';};
+ search.addEventListener('input',filter);type.addEventListener('change',filter);evidence.addEventListener('change',filter);filter();
+ const reveal=()=>{const section=document.getElementById(location.hash.slice(1));const details=section?.classList.contains('catalog-detail')?section.querySelector('details'):null;if(details){details.open=true;section.scrollIntoView();}};
+ addEventListener('hashchange',reveal);reveal();
+})();
+
+(() => {
+ const sections=[...document.querySelectorAll('main>section')],overview=document.querySelector('.audit-catalog'),intro=document.querySelector('main>header'),links=[...document.querySelectorAll('[data-catalog-link]')];
+ function select(){const id=location.hash.slice(1),selected=sections.find(s=>s.id===id);sections.forEach(s=>{s.hidden=s!==selected;s.dataset.selected=String(s===selected);});if(overview)overview.hidden=!!selected;if(intro)intro.hidden=!!selected;links.forEach(a=>{if(a.hash==='#'+id)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});if(selected){const d=selected.querySelector(':scope>details');if(d)d.open=true;window.scrollTo(0,0);}}
+ addEventListener('hashchange',select);select();
+ document.getElementById('nav-search')?.addEventListener('input',e=>{const term=e.target.value.toLowerCase().trim();links.forEach(a=>a.hidden=!(a.textContent+' '+a.title).toLowerCase().includes(term));document.querySelectorAll('.nav-group').forEach(g=>{g.hidden=![...g.querySelectorAll('a')].some(a=>!a.hidden);if(term)g.open=true;});});
+})();
