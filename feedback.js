@@ -81,7 +81,7 @@
 
 (() => {
  const sections=[...document.querySelectorAll('main>section')],overview=document.querySelector('.audit-catalog'),intro=document.querySelector('main>header'),links=[...document.querySelectorAll('[data-catalog-link]')];
- function select(){const id=location.hash.slice(1),selected=sections.find(s=>s.id===id);sections.forEach(s=>{s.hidden=s!==selected;s.dataset.selected=String(s===selected);});if(overview)overview.hidden=!!selected;if(intro)intro.hidden=!!selected;links.forEach(a=>{if(a.hash==='#'+id)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});if(selected){const d=selected.querySelector(':scope>details');if(d)d.open=true;window.scrollTo(0,0);}}
+ function select(){const id=location.hash.slice(1),selected=sections.find(s=>s.id===id);sections.forEach(s=>{s.hidden=s!==selected;s.dataset.selected=String(s===selected);});if(overview)overview.hidden=!!selected;if(intro)intro.hidden=!!selected;links.forEach(a=>{if(a.hash==='#'+id)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});if(selected){const d=selected.classList.contains('catalog-detail')?selected.querySelector(':scope>details'):null;if(d)d.open=true;window.scrollTo(0,0);}}
  addEventListener('hashchange',select);select();
  document.getElementById('nav-search')?.addEventListener('input',e=>{const term=e.target.value.toLowerCase().trim();links.forEach(a=>a.hidden=!(a.textContent+' '+a.title).toLowerCase().includes(term));document.querySelectorAll('.nav-group').forEach(g=>{g.hidden=![...g.querySelectorAll('a')].some(a=>!a.hidden);if(term)g.open=true;});});
 })();
