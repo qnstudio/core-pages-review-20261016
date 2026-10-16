@@ -48,7 +48,7 @@ main { max-width: 1600px; margin-left: 220px; padding: 32px; }
 .state-pill.captured { background: #e8eee8; color: #31523b; }
 .state-pill.waiting { background: #f4ead6; color: #785f28; }
 .capture-scroll { max-height: 620px; overflow: auto; background: #fbfbf6; }
-.capture-scroll img { display: block; width: 100%; height: auto; }
+.capture-scroll img { display: block; width: auto; max-width: 100%; height: auto; margin: 0 auto; }
 .state-card button { border: 1px solid #aaa; background: white; color: #333; font: inherit; font-size: 11px; padding: 6px 9px; margin: 10px 5px 0 0; cursor: pointer; }
 .capture-missing { padding: 30px 0; font-size: 12px; color: #897447; }
 .capture-dialog { max-width: min(90vw,1000px); width: max-content; max-height: 90vh; border: 1px solid #aaa; padding: 20px; overflow: auto; }
