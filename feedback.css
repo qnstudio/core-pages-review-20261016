@@ -40,6 +40,7 @@ main { max-width: 1600px; margin-left: 220px; padding: 32px; }
 .feedback-editor,.feedback-delete-confirm { border-top: 1px solid #ddd; margin-top: 14px; padding-top: 10px; font-size: 12px; }
 .feedback-delete-confirm button { margin: 8px 6px 0 0; }
 .state-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.state-grid.single { grid-template-columns: minmax(0,400px); justify-content: center; }
 .state-card { min-width: 0; border: 1px solid #deded8; padding: 14px; background: #fafaf7; }
 .state-card > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 .state-card h3 { margin: 0; font-size: 13px; }
