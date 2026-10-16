@@ -76,7 +76,7 @@
   const queue=document.getElementById('work-items'),status=document.getElementById('work-status');
   if(!queue)return;
   const endpoint=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'http://127.0.0.1:4186/api/work':'https://core-review-feedback.qnstudio11.chatgpt.site/api/work';
-  const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set();
+  const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set(rows.filter(row=>row.dataset.evidence==='yes').map(row=>row.dataset.page));
   let ready=false,busy=false;
   function render(){
     queue.replaceChildren();let count=0;
@@ -100,7 +100,7 @@
     }catch(error){status.textContent=error.message;}finally{busy=false;render();}
   }
   rows.forEach(row=>row.querySelector('.work-reopen').addEventListener('click',()=>save(row.dataset.page,false)));
-  fetch(endpoint,{cache:'no-store'}).then(async response=>{const result=await response.json();if(!response.ok)throw Error(result.error||'불러오지 못했습니다.');result.items.forEach(item=>{if(item.completedAt)completed.add(item.page);});ready=true;status.textContent='';render();}).catch(error=>{status.textContent=`작업 상태를 불러오지 못했습니다: ${error.message}`;render();});
+  fetch(endpoint,{cache:'no-store'}).then(async response=>{const result=await response.json();if(!response.ok)throw Error(result.error||'불러오지 못했습니다.');result.items.forEach(item=>{if(item.completedAt)completed.add(item.page);else completed.delete(item.page);});ready=true;status.textContent='';render();}).catch(error=>{status.textContent=`작업 상태를 불러오지 못했습니다: ${error.message}`;render();});
   render();
 })();
 
