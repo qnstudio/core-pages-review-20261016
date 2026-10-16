@@ -65,6 +65,6 @@
   const observer=new IntersectionObserver(entries=>entries.forEach(({target,isIntersecting})=>{if(isIntersecting){visible.add(target);loaders.get(target)();}else visible.delete(target);}),{rootMargin:'150px'});
   loaders.forEach((load,panel)=>observer.observe(panel));window.addEventListener('focus',()=>visible.forEach(p=>loaders.get(p)()));
   const dialog=document.querySelector('.capture-dialog');
-  document.querySelectorAll('.capture-open').forEach(b=>b.addEventListener('click',()=>{const image=b.closest('.state-card').querySelector('img');dialog.querySelector('img').src=image.src;dialog.querySelector('img').alt=image.alt;dialog.querySelector('h3').textContent=image.alt;dialog.showModal();}));
+  document.querySelectorAll('.capture-open').forEach(b=>b.addEventListener('click',()=>{const image=b.previousElementSibling.querySelector('img');dialog.querySelector('img').src=image.src;dialog.querySelector('img').alt=image.alt;dialog.querySelector('h3').textContent=image.alt;dialog.showModal();}));
   dialog.querySelector('button').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
 })();
