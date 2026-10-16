@@ -23,6 +23,10 @@ main { max-width: 1600px; margin-left: 220px; padding: 32px; }
 .feedback-list time { color: #888; font-size: 11px; }
 .feedback-list p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedback-list .feedback-empty { color: #888; font-size: 12px; }
+.feedback-row { position: relative; }
+.feedback-row > details > summary { padding-right: 86px; }
+.feedback-revised { display: inline-block; margin-left: 7px; color: #000; font-weight: 700; }
+.feedback .feedback-revise-button { position: absolute; top: 8px; right: 0; padding: 5px 8px; border: 1px solid #111; background: #fff; color: #111; font-size: 11px; }
 .feedback-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .state-caption { font-size: 12px; margin: 20px 0 8px; color: #555; }
 @media(max-width:1100px) { .review-layout { grid-template-columns: minmax(0,1fr); } .feedback { position: static; border-left: 0; border-top: 1px solid #deded8; padding: 22px 0 0; } }
@@ -66,3 +70,4 @@ body aside{width:260px;box-sizing:border-box;overflow-y:auto;height:100vh}body m
 
 main>section{display:none}main>section[data-selected="true"]{display:block}
 body aside nav{display:block}
+.work-queue{margin:12px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd}.work-queue>summary{cursor:pointer;font-size:12px;font-weight:600;padding:12px 0}.work-queue>summary span{float:right}.work-queue #work-status{font-size:11px;color:#666;line-height:1.4;margin:4px 0}.work-queue #work-items{max-height:280px;overflow:auto}.work-item{display:flex;gap:4px;align-items:center}.work-item a{flex:1;min-width:0}.work-item button,.work-reopen{font:inherit;font-size:11px;padding:4px 7px;border:1px solid #aaa;background:white;cursor:pointer}.work-item button:disabled,.work-reopen:disabled{opacity:.4;cursor:wait}

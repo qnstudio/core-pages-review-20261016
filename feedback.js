@@ -24,7 +24,8 @@
       list.replaceChildren();const completed=items.filter(i=>i.completedAt).length;count.textContent=`피드백 ${items.length} · 완료 ${completed}`;
       if(!items.length){list.append(el('li','아직 피드백이 없습니다.','feedback-empty'));return;}
       items.forEach(item=>{
-        const li=el('li'),details=el('details'),summary=el('summary',item.author),content=el('div',undefined,'feedback-content');
+        const li=el('li'),row=el('div',undefined,'feedback-row'),details=el('details'),summary=el('summary'),content=el('div',undefined,'feedback-content');
+        summary.append(el('span',item.author));if(item.revisedAt)summary.append(el('span','✓','feedback-revised'));
         details.className=item.completedAt?'feedback-item completed':'feedback-item';details.open=expanded.has(item.id);details.addEventListener('toggle',()=>details.open?expanded.add(item.id):expanded.delete(item.id));
         summary.title=item.completedAt?'작성자 확인 완료':'미완료';
         const meta=el('div',`${labels[item.state]||labels.page} · ${date.format(new Date(item.createdAt))}`,'feedback-meta');
@@ -44,7 +45,7 @@
             const box=el('div','이 피드백을 삭제할까요?','feedback-delete-confirm');box.append(button('삭제 확인',()=>change(item,'DELETE',{})),button('취소',()=>box.remove()));content.append(box);
           }));content.append(actions);
         }else content.append(el('small','수정·삭제·완료는 작성한 브라우저에서 할 수 있습니다.','feedback-owner-note'));
-        details.append(summary,content);li.append(details);list.append(li);
+        details.append(summary,content);row.append(details,button(item.revisedAt?'보완 취소':'보완',()=>change(item,'PATCH',{action:item.revisedAt?'unrevise':'revise'})));row.lastChild.className='feedback-revise-button';li.append(row);list.append(li);
       });
     }
     async function load(){if(loading||busy)return;loading=true;try{items=(await api('GET',null,page)).items;render();}catch{count.textContent='불러오지 못했습니다. 새로고침해 주세요.';}finally{loading=false;}}
@@ -67,6 +68,38 @@
   const dialog=document.querySelector('.capture-dialog');
   document.querySelectorAll('.capture-open').forEach(b=>b.addEventListener('click',()=>{const image=b.previousElementSibling.querySelector('img');dialog.querySelector('img').src=image.src;dialog.querySelector('img').alt=image.alt;dialog.querySelector('h3').textContent=image.alt;dialog.showModal();}));
   dialog.querySelector('button').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+})();
+
+(() => {
+  const queue=document.getElementById('work-items'),status=document.getElementById('work-status');
+  if(!queue)return;
+  const endpoint=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'http://127.0.0.1:4186/api/work':'https://core-review-feedback.qnstudio11.chatgpt.site/api/work';
+  const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set();
+  let ready=false,busy=false;
+  function render(){
+    queue.replaceChildren();let count=0;
+    rows.forEach(row=>{
+      const id=row.dataset.page,done=completed.has(id),action=row.querySelector('.work-reopen');
+      action.disabled=!ready||busy;action.title=done?'작업 중 목록에 다시 추가':'작업 중 목록에 유지';
+      if(done)return;
+      count++;const item=document.createElement('div'),link=document.createElement('a'),button=document.createElement('button');
+      item.className='work-item';link.href='#'+id;link.textContent=row.querySelector('td a').textContent;button.type='button';button.textContent='완료';button.disabled=!ready||busy;
+      button.addEventListener('click',()=>save(id,true));item.append(link,button);queue.append(item);
+    });
+    document.getElementById('work-count').textContent=`${count}개`;
+  }
+  async function save(page,done){
+    if(!ready||busy)return;busy=true;render();status.textContent='저장 중…';
+    try{
+      const response=await fetch(endpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page,completed:done}),cache:'no-store'});
+      const result=await response.json();if(!response.ok)throw Error(result.error||'저장하지 못했습니다.');
+      if(done)completed.add(page);else completed.delete(page);
+      status.textContent=done?'작업 중에서 내렸습니다. 전체현황에는 남아 있습니다.':'작업 중에 추가했습니다.';
+    }catch(error){status.textContent=error.message;}finally{busy=false;render();}
+  }
+  rows.forEach(row=>row.querySelector('.work-reopen').addEventListener('click',()=>save(row.dataset.page,false)));
+  fetch(endpoint,{cache:'no-store'}).then(async response=>{const result=await response.json();if(!response.ok)throw Error(result.error||'불러오지 못했습니다.');result.items.forEach(item=>{if(item.completedAt)completed.add(item.page);});ready=true;status.textContent='';render();}).catch(error=>{status.textContent=`작업 상태를 불러오지 못했습니다: ${error.message}`;render();});
+  render();
 })();
 
 (() => {
