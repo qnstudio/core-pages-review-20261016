@@ -76,7 +76,7 @@
   const queue=document.getElementById('work-items'),status=document.getElementById('work-status');
   if(!queue)return;
   const endpoint=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'http://127.0.0.1:4186/api/work':'https://core-review-feedback.qnstudio11.chatgpt.site/api/work';
-  const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set(rows.filter(row=>row.dataset.evidence==='yes').map(row=>row.dataset.page));
+  const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set();
   let ready=false,busy=false;
   function render(){
     queue.replaceChildren();let count=0;
