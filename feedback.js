@@ -77,6 +77,14 @@
   if(!queue)return;
   const endpoint=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'http://127.0.0.1:4186/api/work':'https://core-review-feedback.qnstudio11.chatgpt.site/api/work';
   const rows=[...document.querySelectorAll('[data-audit-row]')],completed=new Set();
+  rows.forEach(row=>{
+    const id=row.dataset.page,create=()=>{const b=document.createElement('button');b.type='button';b.className='work-complete';b.dataset.workPages=id;b.textContent='완료';b.disabled=true;return b;};
+    row.querySelector('td:last-child').append(create());
+    const section=document.getElementById(id),body=section?.querySelector('.catalog-detail-body');
+    if(body){const actions=document.createElement('div');actions.className='page-work-actions';actions.append(create());body.prepend(actions);}
+  });
+  const completeButtons=[...document.querySelectorAll('.work-complete')];
+  const pagesFor=button=>button.dataset.workPages.split(',').filter(Boolean);
   let ready=false,busy=false;
   function render(){
     queue.replaceChildren();let count=0;
@@ -88,18 +96,22 @@
       item.className='work-item';link.href='#'+id;link.textContent=row.querySelector('td a').textContent;button.type='button';button.textContent='완료';button.disabled=!ready||busy;
       button.addEventListener('click',()=>save(id,true));item.append(link,button);queue.append(item);
     });
+    completeButtons.forEach(button=>{const done=pagesFor(button).every(id=>completed.has(id));button.disabled=!ready||busy||done;button.textContent=done?'완료됨':'완료';button.setAttribute('aria-pressed',String(done));});
     document.getElementById('work-count').textContent=`${count}개`;
   }
   async function save(page,done){
     if(!ready||busy)return;busy=true;render();status.textContent='저장 중…';
     try{
-      const response=await fetch(endpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page,completed:done}),cache:'no-store'});
-      const result=await response.json();if(!response.ok)throw Error(result.error||'저장하지 못했습니다.');
-      if(done)completed.add(page);else completed.delete(page);
+      for(const id of (Array.isArray(page)?page:[page])){
+        const response=await fetch(endpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:id,completed:done}),cache:'no-store'});
+        const result=await response.json();if(!response.ok)throw Error(result.error||'저장하지 못했습니다.');
+        if(done)completed.add(id);else completed.delete(id);
+      }
       status.textContent=done?'작업 중에서 내렸습니다. 전체현황에는 남아 있습니다.':'작업 중에 추가했습니다.';
     }catch(error){status.textContent=error.message;}finally{busy=false;render();}
   }
   rows.forEach(row=>row.querySelector('.work-reopen').addEventListener('click',()=>save(row.dataset.page,false)));
+  completeButtons.forEach(button=>button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();save(pagesFor(button),true);}));
   fetch(endpoint,{cache:'no-store'}).then(async response=>{const result=await response.json();if(!response.ok)throw Error(result.error||'불러오지 못했습니다.');result.items.forEach(item=>{if(item.completedAt)completed.add(item.page);else completed.delete(item.page);});ready=true;status.textContent='';render();}).catch(error=>{status.textContent=`작업 상태를 불러오지 못했습니다: ${error.message}`;render();});
   render();
 })();
