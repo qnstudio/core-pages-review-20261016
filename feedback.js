@@ -38,7 +38,7 @@
           const response=await fetch('http://127.0.0.1:4197/request',{method:'POST',headers:{'Content-Type':'application/json','X-QN-Review-Token':connection.capability},body:JSON.stringify({requestId:request.id,feedbackId:item.id,page:item.page||page}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)}),result=await response.json();
           if(!response.ok||result?.ok!==true)throw Error(serverError(result));
           if(typeof result.messageId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(result.messageId))throw Error('전송 결과를 확인하지 못했습니다. 다시 누르면 같은 요청으로 확인합니다.');
-          request.state='sent';message('이 대화로 전송했습니다.');
+          request.state='sent';message('Codex 접수됨 · 대화 도착은 아직 확인되지 않았습니다.');
         }catch(error){
           request.state='idle';
           const unavailable=error instanceof TypeError||error?.name==='TimeoutError'||error instanceof SyntaxError;
@@ -46,8 +46,8 @@
         }finally{update();}
       });
       b.className='feedback-request-button';b.dataset.feedbackId=item.id;
-      function update(){if(directRequests.get(item.id)!==request)return;list.querySelectorAll('.feedback-request-button').forEach(node=>{if(node.dataset.feedbackId!==item.id)return;node.disabled=request.state==='sending'||request.state==='sent';node.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'전송됨':'요청';});}
-      b.disabled=request.state==='sending'||request.state==='sent';b.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'전송됨':'요청';
+      function update(){if(directRequests.get(item.id)!==request)return;list.querySelectorAll('.feedback-request-button').forEach(node=>{if(node.dataset.feedbackId!==item.id)return;node.disabled=request.state==='sending'||request.state==='sent';node.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'접수됨':'요청';});}
+      b.disabled=request.state==='sending'||request.state==='sent';b.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'접수됨':'요청';
       return b;
     }
     function render(){
