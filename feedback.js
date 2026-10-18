@@ -16,10 +16,40 @@
     author.value=read('core-review-author');body.value=read(draftKey);
     let loading=false,busy=false,requestId=crypto.randomUUID(),items=[];
     const expanded=new Set();
+    const directRequests=new Map();
     function message(text,error=false){status.textContent=text;status.classList.toggle('error',error);}
     if(!persistent)message('브라우저 저장소가 차단되어 있습니다. 작성 후 편집 권한이 유지되지 않을 수 있습니다.',true);
     async function change(item,method,data){if(busy)return;busy=true;panel.setAttribute('aria-busy','true');message('저장 중입니다…');try{await api(method,{id:item.id,...data});message(method==='DELETE'?'삭제되었습니다.':'저장되었습니다.');busy=false;await load();}catch(error){message(error.message,true);}finally{busy=false;panel.removeAttribute('aria-busy');}}
     function button(text,fn){const b=el('button',text);b.type='button';b.addEventListener('click',fn);return b;}
+    function requestButton(item){
+      const revision=JSON.stringify([item.body,item.state,item.updatedAt]);
+      let request=directRequests.get(item.id);
+      if(!request||request.revision!==revision){request={revision,id:crypto.randomUUID(),state:'idle'};directRequests.set(item.id,request);}
+      const b=button('',async()=>{
+        if(request.state==='sending'||request.state==='sent')return;
+        request.state='sending';update();message('이 대화로 보내는 중입니다…');
+        let posting=false;
+        const serverError=result=>{const code=typeof result?.code==='string'?result.code.replace(/[^A-Za-z0-9_-]/g,'').slice(0,60):'';const text=typeof result?.message==='string'?result.message.replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,300):'요청을 전달하지 못했습니다.';return (code?'['+code+'] ':'')+text;};
+        try{
+          const ready=await fetch('http://127.0.0.1:4197/status',{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),connection=await ready.json();
+          if(!ready.ok||connection?.ok!==true)throw Error(serverError(connection));
+          if(typeof connection.capability!=='string'||!connection.capability||connection.capability.length>4096)throw Error('이 PC의 검수 요청 연결 상태를 확인하지 못했습니다.');
+          posting=true;
+          const response=await fetch('http://127.0.0.1:4197/request',{method:'POST',headers:{'Content-Type':'application/json','X-QN-Review-Token':connection.capability},body:JSON.stringify({requestId:request.id,feedbackId:item.id,page:item.page||page}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)}),result=await response.json();
+          if(!response.ok||result?.ok!==true)throw Error(serverError(result));
+          if(typeof result.messageId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(result.messageId))throw Error('전송 결과를 확인하지 못했습니다. 다시 누르면 같은 요청으로 확인합니다.');
+          request.state='sent';message('이 대화로 전송했습니다.');
+        }catch(error){
+          request.state='idle';
+          const unavailable=error instanceof TypeError||error?.name==='TimeoutError'||error instanceof SyntaxError;
+          message(unavailable?(posting?'전송 결과를 확인하지 못했습니다. 같은 요청으로 다시 시도해 주세요. ':'')+'이 PC의 검수 요청 연결기가 실행 중인지 확인해 주세요. Chrome에서 로컬 네트워크 접근 요청이 뜨면 허용해 주세요.':error.message,true);
+        }finally{update();}
+      });
+      b.className='feedback-request-button';b.dataset.feedbackId=item.id;
+      function update(){if(directRequests.get(item.id)!==request)return;list.querySelectorAll('.feedback-request-button').forEach(node=>{if(node.dataset.feedbackId!==item.id)return;node.disabled=request.state==='sending'||request.state==='sent';node.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'전송됨':'요청';});}
+      b.disabled=request.state==='sending'||request.state==='sent';b.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'전송됨':'요청';
+      return b;
+    }
     function render(){
       list.replaceChildren();const completed=items.filter(i=>i.completedAt).length;count.textContent=`피드백 ${items.length} · 완료 ${completed}`;
       if(!items.length){list.append(el('li','아직 피드백이 없습니다.','feedback-empty'));return;}
@@ -30,8 +60,8 @@
         summary.title=item.completedAt?'작성자 확인 완료':item.revisedAt?'보완 처리 · 작성자 확인 대기':'미완료';
         const meta=el('div',`${labels[item.state]||labels.page} · ${date.format(new Date(item.createdAt))}`,'feedback-meta');
         content.append(meta,el('p',item.body),el('span',item.completedAt?'작성자 확인 완료':item.revisedAt?'보완 처리 · 작성자 확인 대기':'미완료','feedback-state'));
+        const actions=el('div',undefined,'feedback-actions');
         if(item.canEdit){
-          const actions=el('div',undefined,'feedback-actions');
           actions.append(button(item.completedAt?'다시 열기':'확인 완료',()=>change(item,'PATCH',{action:item.completedAt?'reopen':'complete'})));
           actions.append(button('수정',()=>{
             if(content.querySelector('.feedback-editor'))return;
@@ -43,8 +73,9 @@
           actions.append(button('삭제',()=>{
             if(content.querySelector('.feedback-delete-confirm'))return;
             const box=el('div','이 피드백을 삭제할까요?','feedback-delete-confirm');box.append(button('삭제 확인',()=>change(item,'DELETE',{})),button('취소',()=>box.remove()));content.append(box);
-          }));content.append(actions);
+          }));
         }else content.append(el('small','수정·삭제·완료는 작성한 브라우저에서 할 수 있습니다.','feedback-owner-note'));
+        actions.append(requestButton(item));content.append(actions);
         const revise=button(item.revisedAt?'보완 처리':'보완',()=>change(item,'PATCH',{action:item.revisedAt?'unrevise':'revise'}));
         revise.className='feedback-revise-button';revise.title=item.revisedAt?'보완 처리 취소':'작업 후 보완 처리';revise.setAttribute('aria-pressed',String(!!item.revisedAt));
         details.append(summary,content);row.append(details,revise);li.append(row);list.append(li);

@@ -81,3 +81,5 @@ body aside nav{display:block}
 #changes .change-image>figcaption{overflow-wrap:anywhere}
 
 @media(max-width:850px){.catalog-detail{padding:18px!important}}
+
+.feedback-actions .feedback-request-button:disabled{opacity:.55;cursor:default}
