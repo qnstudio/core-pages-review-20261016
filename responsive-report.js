@@ -1,0 +1,1 @@
+(() => {const center=()=>document.querySelectorAll(".fresh-wide .capture-scroll").forEach(box=>{if(box.clientWidth)box.scrollLeft=Math.max(0,(box.scrollWidth-box.clientWidth)/2);});document.querySelectorAll(".fresh-wide img").forEach(img=>img.addEventListener("load",center));addEventListener("hashchange",()=>requestAnimationFrame(center));requestAnimationFrame(center);})();
