@@ -22,13 +22,13 @@
     async function change(item,method,data){if(busy)return;busy=true;panel.setAttribute('aria-busy','true');message('저장 중입니다…');try{await api(method,{id:item.id,...data});message(method==='DELETE'?'삭제되었습니다.':'저장되었습니다.');busy=false;await load();}catch(error){message(error.message,true);}finally{busy=false;panel.removeAttribute('aria-busy');}}
     function button(text,fn){const b=el('button',text);b.type='button';b.addEventListener('click',fn);return b;}
     function requestButton(item){
-      const revision=JSON.stringify([item.body,item.state,item.updatedAt]);
+      const revision=JSON.stringify([item.body,item.state,item.updatedAt,item.requestStatus]);
       let request=directRequests.get(item.id);
       if(!request||request.revision!==revision){request={revision,id:crypto.randomUUID(),state:'idle'};directRequests.set(item.id,request);}
       const b=button('',async()=>{
         if(request.state==='sending'||request.state==='sent')return;
         request.state='sending';update();message('이 대화로 보내는 중입니다…');
-        let posting=false;
+        let posting=false,accepted=false;
         const serverError=result=>{const code=typeof result?.code==='string'?result.code.replace(/[^A-Za-z0-9_-]/g,'').slice(0,60):'';const text=typeof result?.message==='string'?result.message.replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,300):'요청을 전달하지 못했습니다.';return (code?'['+code+'] ':'')+text;};
         try{
           const ready=await fetch('http://127.0.0.1:4197/status',{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),connection=await ready.json();
@@ -38,16 +38,18 @@
           const response=await fetch('http://127.0.0.1:4197/request',{method:'POST',headers:{'Content-Type':'application/json','X-QN-Review-Token':connection.capability},body:JSON.stringify({requestId:request.id,feedbackId:item.id,page:item.page||page}),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)}),result=await response.json();
           if(!response.ok||result?.ok!==true)throw Error(serverError(result));
           if(typeof result.messageId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(result.messageId))throw Error('전송 결과를 확인하지 못했습니다. 다시 누르면 같은 요청으로 확인합니다.');
-          request.state='sent';message('Codex 접수됨 · 대화 도착은 아직 확인되지 않았습니다.');
+          accepted=true;
+          await api('PATCH',{id:item.id,action:'start_request'});
+          request.state='sent';message('Codex 접수됨 · 요청작업중');await load();
         }catch(error){
-          request.state='idle';
+          request.state=accepted?'sent':'idle';
           const unavailable=error instanceof TypeError||error?.name==='TimeoutError'||error instanceof SyntaxError;
-          message(unavailable?(posting?'전송 결과를 확인하지 못했습니다. 같은 요청으로 다시 시도해 주세요. ':'')+'이 PC의 검수 요청 연결기가 실행 중인지 확인해 주세요. Chrome에서 로컬 네트워크 접근 요청이 뜨면 허용해 주세요.':error.message,true);
+          message(accepted?'요청은 접수됐지만 작업 상태를 저장하지 못했습니다. 새로고침 후 확인해 주세요.':unavailable?(posting?'전송 결과를 확인하지 못했습니다. 같은 요청으로 다시 시도해 주세요. ':'')+'이 PC의 검수 요청 연결기가 실행 중인지 확인해 주세요. Chrome에서 로컬 네트워크 접근 요청이 뜨면 허용해 주세요.':error.message,true);
         }finally{update();}
       });
       b.className='feedback-request-button';b.dataset.feedbackId=item.id;
-      function update(){if(directRequests.get(item.id)!==request)return;list.querySelectorAll('.feedback-request-button').forEach(node=>{if(node.dataset.feedbackId!==item.id)return;node.disabled=request.state==='sending'||request.state==='sent';node.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'접수됨':'요청';});}
-      b.disabled=request.state==='sending'||request.state==='sent';b.textContent=request.state==='sending'?'보내는 중…':request.state==='sent'?'접수됨':'요청';
+      function update(){if(directRequests.get(item.id)!==request)return;list.querySelectorAll('.feedback-request-button').forEach(node=>{if(node.dataset.feedbackId!==item.id)return;node.disabled=request.state==='sending'||request.state==='sent'||item.requestStatus==='processing';node.textContent=request.state==='sending'?'보내는 중…':item.requestStatus==='processing'?'요청작업중':request.state==='sent'?'접수됨':item.requestStatus==='processed'?'다시 요청':'요청';});}
+      b.disabled=request.state==='sending'||request.state==='sent'||item.requestStatus==='processing';b.textContent=request.state==='sending'?'보내는 중…':item.requestStatus==='processing'?'요청작업중':request.state==='sent'?'접수됨':item.requestStatus==='processed'?'다시 요청':'요청';
       return b;
     }
     function render(){
@@ -61,6 +63,7 @@
         const meta=el('div',`${labels[item.state]||labels.page} · ${date.format(new Date(item.createdAt))}`,'feedback-meta');
         content.append(meta,el('p',item.body),el('span',item.completedAt?'작성자 확인 완료':item.revisedAt?'보완 처리 · 작성자 확인 대기':'미완료','feedback-state'));
         const actions=el('div',undefined,'feedback-actions');
+        if(item.requestStatus)actions.append(el('span',item.requestStatus==='processing'?'요청작업중':'요청처리','feedback-request-status'));
         if(item.canEdit){
           actions.append(button(item.completedAt?'다시 열기':'확인 완료',()=>change(item,'PATCH',{action:item.completedAt?'reopen':'complete'})));
           actions.append(button('수정',()=>{
